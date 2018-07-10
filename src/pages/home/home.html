@@ -1,14 +1,19 @@
 <ion-header>
-  <ion-navbar>
+  <ion-navbar color="secondary">
     <ion-title>
-      Ionic Blank
+      Teste de mapa
     </ion-title>
   </ion-navbar>
 </ion-header>
 
 <ion-content padding>
-  The world is your oyster.
-  <p>
-    If you get lost, the <a href="http://ionicframework.com/docs/v2">docs</a> will be your guide.
-  </p>
+  <h3>Ionic GoogleMaps</h3>
+
+  <div id="map_canvas">
+      <button ion-button  color="secondary" (click)="start()">Iniciar</button>
+      <button ion-button  color="dark" (click)="stop()">Pausar</button>
+      <button ion-button  color="danger" (click)="limpar()">Finalizar</button>
+  </div>
+
+
 </ion-content>
