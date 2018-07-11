@@ -5,6 +5,8 @@ import { LocationTracker } from "../../providers/location-tracker/location-track
 import { ILocale } from "../../models/ILocale";
 import { StorageProvider } from "../../providers/storage";
 import { Geolocation, Geoposition } from "@ionic-native/geolocation";
+import { ICoordenada } from "../../models/ICoordenada";
+import { IRota } from "../../models/IRota";
 
 @Component({
   selector: "page-home",
@@ -12,10 +14,11 @@ import { Geolocation, Geoposition } from "@ionic-native/geolocation";
 })
 export class HomePage {
   map: GoogleMap;
-  rotas: ILocale[] = [];
-  atual: ILocale = {
+  coordenadas: ICoordenada[] = [];
+  rotas: IRota[] = [];
+  atual: ICoordenada = {
     lat: null,
-    lng: null
+    lng: null,
   };
 
   constructor(
@@ -24,7 +27,8 @@ export class HomePage {
     public storageProvider: StorageProvider,
     public geolocation: Geolocation
   ) {
-    this.rotas = this.storageProvider.getLocale();
+    this.pushCoordenadas(this.storageProvider.getLocale());
+    this.rotas=this.storageProvider.getRota();
     this.loadMap();
   }
 
@@ -35,13 +39,18 @@ export class HomePage {
   public stop() {
     this.locationTracker.stopTracking();
     this.loadMap();
-    this.rotas = this.storageProvider.getLocale();
+    this.pushCoordenadas(this.storageProvider.getLocale());
   }
 
+  public finalizar() {
+    this.locationTracker.finalizar();
+    this.loadMap();
+    this.coordenadas = [];
+  }
   public limpar() {
     this.locationTracker.limpar();
     this.loadMap();
-    this.rotas = [];
+    this.coordenadas = [];
   }
 
   public loadMap() {
@@ -74,12 +83,19 @@ export class HomePage {
       }
     });
 
-    if (this.rotas.length) {
+    if (this.coordenadas.length) {
       this.map.addPolyline({
-        points: this.rotas,
+        points: this.coordenadas,
         geodesic: true,
         clickable: true // clickable = false in default
       });
     }
   }
+
+  private pushCoordenadas(locale: ILocale[]) {
+    locale.forEach(current => {
+      this.coordenadas.push({ lat: current.coordenada.lat, lng: current.coordenada.lng });
+    });
+  }
+
 }
