@@ -6,7 +6,7 @@ import { IRota } from "../models/IRota";
 export class StorageProvider {
 
     public databaseLocale = "locale";
-    public databaseRota = "rotas";
+    public databaseRouter = "routers";
 
     getLocale(): Array<ILocale> {
         let lista = JSON.parse(localStorage.getItem(this.databaseLocale));
@@ -30,24 +30,24 @@ export class StorageProvider {
     }
 
 
-    getRota(): Array<IRota> {
-        let lista = JSON.parse(localStorage.getItem(this.databaseRota));
+    getRouter(): Array<IRota> {
+        let lista = JSON.parse(localStorage.getItem(this.databaseRouter));
         return lista ? lista : [];
     }
 
-    setRota(obj: IRota) {
-        let lista = this.getRota();
+    setRouter(obj: IRota) {
+        let lista = this.getRouter();
         if (!lista)
             lista = [];
 
         lista.push(obj);
-        localStorage.setItem(this.databaseRota, JSON.stringify(lista));
+        localStorage.setItem(this.databaseRouter, JSON.stringify(lista));
 
         return lista;
     }
 
-    removeRota(): Array<IRota> {
-        localStorage.removeItem(this.databaseRota);
+    removeRouter(): Array<IRota> {
+        localStorage.removeItem(this.databaseRouter);
         return [];
     }
 

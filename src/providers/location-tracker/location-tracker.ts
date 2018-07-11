@@ -1,4 +1,4 @@
-import { Platform } from "ionic-angular";
+import { Platform, ToastController } from "ionic-angular";
 import { StorageProvider } from "./../storage";
 import { Injectable, NgZone } from "@angular/core";
 import {
@@ -8,7 +8,6 @@ import {
 import { Geolocation, Geoposition } from "@ionic-native/geolocation";
 import "rxjs/add/operator/filter";
 import { ILocale } from "../../models/ILocale";
-import { ICoordenada } from "../../models/ICoordenada";
 import { IRota } from "../../models/IRota";
 
 /*
@@ -20,9 +19,10 @@ import { IRota } from "../../models/IRota";
 @Injectable()
 export class LocationTracker {
   public watch: any;
-  public localizacoes: ILocale[];
-  public rota: IRota;
-  public localizacao: ILocale = {
+  public active: boolean = false;
+  public locales: ILocale[];
+  public router: IRota;
+  public locale: ILocale = {
     coordenada: null,
     time: null,
     speed: null
@@ -56,28 +56,31 @@ export class LocationTracker {
     public zone: NgZone,
     public backgroundGeolocation: BackgroundGeolocation,
     public geolocation: Geolocation,
-    public storageProvider: StorageProvider
+    public storageProvider: StorageProvider,
+    public toastController: ToastController
   ) {
-    this.localizacoes = this.storageProvider.getLocale();
+    this.locales = this.storageProvider.getLocale();
   }
 
-  startTracking() {
+  public startTracking() {
     this.stopTracking();
 
     this.backgroundGeolocation
       .configure(this.configBackgroundGeolocation)
       .subscribe((location: BackgroundGeolocationResponse) => {
+        this.zone.run(() => {
+          this.locale = {
+            coordenada: { lat: location.latitude, lng: location.longitude },
+            time: location.time,
+            speed: location.speed
+          };
 
-        this.localizacao = {
-          coordenada: { lat: location.latitude, lng: location.longitude },
-          time: location.time,
-          speed: location.speed
-        };
-        this.localizacoes = this.storageProvider
-          .setLocale(this.localizacao)
-          .reverse();
+          if (this.validDistance(this.locale))
+            this.locales = this.storageProvider.setLocale(this.locale);
+        });
       });
     this.backgroundGeolocation.start();
+    this.active = true;
 
     this.watch = this.geolocation
       .watchPosition(this.options)
@@ -88,71 +91,114 @@ export class LocationTracker {
 
         // Run update inside of Angular's zone
         this.zone.run(() => {
-          this.localizacao = {
-            coordenada: { lat: position.coords.latitude, lng: position.coords.longitude },
+          this.locale = {
+            coordenada: {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            },
             time: time,
             speed: position.coords.speed
           };
-          this.localizacoes = this.storageProvider
-            .setLocale(this.localizacao)
-            .reverse();
+
+          if (this.validDistance(this.locale))
+            this.locales = this.storageProvider.setLocale(this.locale);
         });
 
+        console.log("locales", this.locales);
       });
   }
 
-  stopTracking() {
-    if (this.watch) {
+  public stopTracking() {
+    if (this.active) {
       this.watch.unsubscribe();
+      this.backgroundGeolocation.finish();
+      this.backgroundGeolocation.stop();
+      this.active = false;
     }
-    this.backgroundGeolocation.stop();
-    this.backgroundGeolocation.finish();
   }
 
-  finalizar() {
-    let maxPosition = (this.localizacoes.length - 1);
-    if (maxPosition != 0) {
+  public finish() {
+    this.stopTracking();
 
+    let maxPosition = this.locales.length - 1;
+    if (maxPosition >= 0) {
       let distancia = 0;
 
       for (let index = 0; index < maxPosition; index++) {
-        if (!this.localizacoes[index + 1]) {
+        if (!this.locales[index + 1]) {
           break;
         }
-        distancia += this.getDistanceFromLatLonInKm(this.localizacoes[index], this.localizacoes[index + 1]);
+        distancia += this.getDistanceFromLatLonInKm(
+          this.locales[index].coordenada,
+          this.locales[index + 1].coordenada
+        );
       }
 
-      this.rota = {
+      this.router = {
         nome: `[${this.n}] Rota`,
-        inicio: this.localizacoes[0].time,
-        fim: this.localizacoes[maxPosition].time,
-        localizacoes: this.localizacoes,
+        inicio: this.locales[0].time,
+        fim: this.locales[maxPosition].time,
+        localizacoes: this.locales,
         distancia: distancia
       };
-      this.storageProvider.setRota(this.rota);
+      this.storageProvider.setRouter(this.router);
     }
 
-    this.stopTracking();
-    this.localizacoes = this.storageProvider.removeLocale();
+    this.locales = this.storageProvider.removeLocale();
   }
 
-  limpar() {
+  public clearAll() {
+    this.clear();
+    this.storageProvider.removeRouter();
+  }
+
+  public clear() {
     this.stopTracking();
-    this.localizacoes = this.storageProvider.removeLocale();
-    this.storageProvider.removeRota();
+    this.locales = this.storageProvider.removeLocale();
   }
 
   private getDistanceFromLatLonInKm(position1, position2): number {
-    var deg2rad = function (deg) { return deg * (Math.PI / 180); },
+    var deg2rad = function(deg) {
+        return deg * (Math.PI / 180);
+      },
       R = 6371,
       dLat = deg2rad(position2.lat - position1.lat),
       dLng = deg2rad(position2.lng - position1.lng),
-      a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-        + Math.cos(deg2rad(position1.lat))
-        * Math.cos(deg2rad(position1.lat))
-        * Math.sin(dLng / 2) * Math.sin(dLng / 2),
+      a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(position1.lat)) *
+          Math.cos(deg2rad(position1.lat)) *
+          Math.sin(dLng / 2) *
+          Math.sin(dLng / 2),
       c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return parseFloat((R * c * 1000).toFixed());
   }
 
+  private validDistance(locale: ILocale) {
+    let max = this.locales.length;
+
+    if (max > 1) {
+      let dtIni, dtEnd;
+      dtEnd = new Date(this.locales[max - 1].time);
+      dtIni = new Date(locale.time);
+      let distance = this.getDistanceFromLatLonInKm(
+        locale.coordenada,
+        this.locales[max - 1].coordenada
+      );
+
+      if (distance > 10 && this.timePeriod(dtIni, dtEnd) < 3) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private timePeriod(dtIni, dtEnd): number {
+    return Math.round((dtEnd - dtIni) / 60 / 60);
+  }
+
+  private validGPS() {
+    return true;
+  }
 }

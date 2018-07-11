@@ -1,12 +1,19 @@
 import { NavController } from "ionic-angular";
 import { Component } from "@angular/core";
-import { GoogleMaps, GoogleMap, LatLng } from "@ionic-native/google-maps";
+import {
+  GoogleMaps,
+  GoogleMap,
+  LatLng,
+  GoogleMapsEvent,
+  HtmlInfoWindow,
+  Marker
+} from "@ionic-native/google-maps";
 import { LocationTracker } from "../../providers/location-tracker/location-tracker";
-import { ILocale } from "../../models/ILocale";
 import { StorageProvider } from "../../providers/storage";
-import { Geolocation, Geoposition } from "@ionic-native/geolocation";
+import { Geolocation } from "@ionic-native/geolocation";
 import { ICoordenada } from "../../models/ICoordenada";
 import { IRota } from "../../models/IRota";
+import { ILocale } from "../../models/ILocale";
 
 @Component({
   selector: "page-home",
@@ -14,12 +21,12 @@ import { IRota } from "../../models/IRota";
 })
 export class HomePage {
   map: GoogleMap;
-  coordenadas: ICoordenada[] = [];
-  rotas: IRota[] = [];
-  atual: ICoordenada = {
-    lat: null,
-    lng: null,
-  };
+  n: number = 0;
+  coordinates: ICoordenada[] = [];
+  routers: IRota[] = [];
+  router: IRota;
+  current: LatLng;
+  colors: string[];
 
   constructor(
     public navCtrl: NavController,
@@ -27,9 +34,20 @@ export class HomePage {
     public storageProvider: StorageProvider,
     public geolocation: Geolocation
   ) {
-    this.pushCoordenadas(this.storageProvider.getLocale());
-    this.rotas=this.storageProvider.getRota();
+    this.colors = [
+      "#00FF00",
+      "#FF0000",
+      "#0000FF",
+      "#FFFF00",
+      "#CCEEFF",
+      "#000000",
+      "#FFFFFF"
+    ];
     this.loadMap();
+  }
+
+  public initRouter() {
+    this.routers = this.storageProvider.getRouter();
   }
 
   public start() {
@@ -38,36 +56,35 @@ export class HomePage {
 
   public stop() {
     this.locationTracker.stopTracking();
-    this.loadMap();
-    this.pushCoordenadas(this.storageProvider.getLocale());
+    this.addPolyline();
   }
 
-  public finalizar() {
-    this.locationTracker.finalizar();
-    this.loadMap();
-    this.coordenadas = [];
+  public finish() {
+    this.locationTracker.finish();
+    this.addPolyline();
   }
-  public limpar() {
-    this.locationTracker.limpar();
-    this.loadMap();
-    this.coordenadas = [];
+
+  public clearAll() {
+    this.locationTracker.clearAll();
+    this.addPolyline();
+  }
+
+  public clear() {
+    this.locationTracker.clear();
+    this.addPolyline();
   }
 
   public loadMap() {
-    let lat: number = -15.8002699;
-    let lng: number = -47.8929005;
-
+    this.current = new LatLng(-15.8002699, -47.8929005);
     this.geolocation
       .getCurrentPosition()
       .then(resp => {
-        lat = resp.coords.latitude;
-        lng = resp.coords.longitude;
+        this.current = new LatLng(resp.coords.latitude, resp.coords.longitude);
       })
       .catch(error => {
         console.log("Error getting location", error);
       });
 
-    // Create a map after the view is ready and the native platform is ready.
     this.map = GoogleMaps.create("map_canvas", {
       controls: {
         compass: true,
@@ -76,26 +93,117 @@ export class HomePage {
         zoom: true
       },
       camera: {
-        // target: new LatLng(this.atual.lat,this.atual.lng),
-        target: new LatLng(lat, lng),
+        target: this.current,
         tilt: 3,
         zoom: 15
       }
     });
 
-    if (this.coordenadas.length) {
-      this.map.addPolyline({
-        points: this.coordenadas,
-        geodesic: true,
-        clickable: true // clickable = false in default
+    this.map.on(GoogleMapsEvent.MAP_READY).subscribe(() => {
+      this.map.setCameraZoom(18);
+      this.map.setCameraTarget(this.current);
+    });
+
+    this.addPolyline();
+  }
+
+  public addPolyline() {
+    this.initRouter();
+    this.map.clear();
+    if (this.routers.length) {
+      this.routers.forEach(rota => {
+        this.pushPolyline(rota);
       });
     }
   }
 
-  private pushCoordenadas(locale: ILocale[]) {
-    locale.forEach(current => {
-      this.coordenadas.push({ lat: current.coordenada.lat, lng: current.coordenada.lng });
+  public pushPolyline(router: IRota) {
+    this.pushCoordinates(router);
+    this.map.addPolyline({
+      points: this.coordinates,
+      geodesic: true,
+      color: this.colors[this.n]
+    });
+    this.n = this.n > 7 ? 0 : this.n + 1;
+
+    let max = router.localizacoes.length;
+    if (max > 1) {
+      this.addMarker(router.localizacoes[0], `[${router.nome}] - Origem`);
+      this.addMarker(
+        router.localizacoes[max - 1],
+        `[${router.nome}] - Destino`
+      );
+    }
+  }
+
+  private pushCoordinates(router: IRota) {
+    this.coordinates = [];
+    router.localizacoes.forEach(current => {
+      this.coordinates.push({
+        lat: current.coordenada.lat,
+        lng: current.coordenada.lng
+      });
     });
   }
 
+  private addMarker(locale: ILocale, titulo: string) {
+    this.map
+      .addMarker({
+        position: locale.coordenada,
+        draggable: false,
+        disableAutoPan: true,
+        icon: {
+          size: {
+            width: 32,
+            height: 32
+          },
+          url: "./assets/imgs/marker-1.png"
+        }
+      })
+      .then((marker: Marker) => {
+        marker.on(GoogleMapsEvent.MARKER_CLICK).subscribe(() => {
+          this.addInfoWindow(locale, titulo).open(marker);
+        });
+      });
+  }
+
+  private addInfoWindow(locale: ILocale, titulo: string): HtmlInfoWindow {
+    let htmlInfoWindow = new HtmlInfoWindow();
+    let frame: HTMLElement = document.createElement("div");
+
+    frame.innerHTML = [
+      `
+      <div class="modal" id="modal-name" style="display:block;">
+      <div class="modal-sandbox"></div>
+      <div class="modal-box">
+        <div class="modal-header">
+          <div class="close-modal">&#10006;</div>
+          <h1>${titulo}</h1>
+        </div>
+        <div class="modal-body">
+          <p>Data e Hora:${locale.time}</p>
+        </div>
+      </div>
+    </div>`
+    ].join("");
+
+    frame
+      .getElementsByClassName("close-modal")[0]
+      .addEventListener("click", () => {
+        htmlInfoWindow.close();
+      });
+    htmlInfoWindow.setContent(frame, {});
+    return htmlInfoWindow;
+  }
+
+  public convertDate(date: Date, config = null) {
+    return date.toLocaleDateString("pt-BR", config);
+  }
+
+  public changeRoute(router) {
+    if (router) {
+      this.map.clear();
+      this.pushPolyline(this.router);
+    }
+  }
 }
