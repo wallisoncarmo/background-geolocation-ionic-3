@@ -22,10 +22,8 @@ export class HomePage {
     public geolocation: Geolocation,
     public googleMapService: GoogleMapService
   ) {
-    this.locationTracker.ativarGPS();
     this.initRouter();
     this.googleMapService.loadMap("map_canvas", this.routers);
-    setInterval(1000, this.locationTracker.validGPS());
   }
 
   public initRouter() {

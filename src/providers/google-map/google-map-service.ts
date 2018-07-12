@@ -72,7 +72,7 @@ export class GoogleMapService {
   }
 
   public addPolyline(routers) {
-    this.n=0;
+    this.n = 0;
     this.map.clear();
     if (routers.length) {
       routers.forEach(rota => {

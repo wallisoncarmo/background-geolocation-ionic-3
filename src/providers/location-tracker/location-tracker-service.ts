@@ -74,24 +74,34 @@ export class LocationTrackerService {
 
   public startTracking() {
     this.stopTracking();
+    this.ativarGPS();
+
+    this.diagnostic.registerLocationStateChangeHandler(state =>
+      this.validGPS()
+    );
 
     this.backgroundGeolocation
       .configure(this.configBackgroundGeolocation)
       .subscribe((location: BackgroundGeolocationResponse) => {
-        this.zone.run(() => {
-          this.locale = {
-            coordenada: { lat: location.latitude, lng: location.longitude },
-            time: location.time,
-            speed: location.speed
-          };
+        this.locale = {
+          coordenada: { lat: location.latitude, lng: location.longitude },
+          time: location.time,
+          speed: location.speed
+        };
 
-          console.log("locale", this.locale);
+        console.log("locale", this.locale);
 
-          if (this.validDistance(this.locale))
-            this.locales = this.storageService.setLocale(this.locale);
-        });
+        if (this.validDistance(this.locale)) {
+          this.locales = this.storageService.setLocale(this.locale);
+        }
 
-        this.validGPS();
+        // this.zone.run(
+        //   () => {
+        //   },
+        //   error => {
+        //     console.error(error);
+        //   }
+        // );
       });
 
     this.backgroundGeolocation.start();
@@ -105,24 +115,28 @@ export class LocationTrackerService {
         let time = current.getTime();
 
         // Run update inside of Angular's zone
-        this.zone.run(() => {
-          this.locale = {
-            coordenada: {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            },
-            time: time,
-            speed: position.coords.speed
-          };
-
-          if (this.validDistance(this.locale))
-            this.locales = this.storageService.setLocale(this.locale);
-          this.gpsOffs = this.storageService.setGPSOff(this.locale);
-        });
-
-        this.validGPS();
+        this.locale = {
+          coordenada: {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          },
+          time: time,
+          speed: position.coords.speed
+        };
 
         console.log("locales", this.locales);
+
+        if (this.validDistance(this.locale)) {
+          this.locales = this.storageService.setLocale(this.locale);
+        }
+
+        // this.zone.run(
+        //   () => {
+        //   },
+        //   error => {
+        //     console.error(error);
+        //   }
+        // );
       });
   }
 
@@ -220,19 +234,19 @@ export class LocationTrackerService {
     return Math.round((dtEnd - dtIni) / 60 / 60);
   }
 
-  public validGPS() {
-    this.diagnostic
+  public validGPS(): Promise<any> {
+    return this.diagnostic
       .isGpsLocationEnabled()
       .then(state => {
         let max = this.locales.length;
         if (!state && max > 0) {
-          this.gpsOffs.push(this.locales[max - 1]);
+          this.gpsOffs = this.storageService.setGPSOff(this.locale);
           this.ativarGPS();
         }
         return state;
       })
       .catch(e => console.error(e));
-    return false;
+    // return false;
   }
 
   public ativarGPS() {
