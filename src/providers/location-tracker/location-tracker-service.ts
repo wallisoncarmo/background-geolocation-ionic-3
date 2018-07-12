@@ -1,5 +1,4 @@
 import { Platform, ToastController } from "ionic-angular";
-import { StorageProvider } from "./../storage";
 import { Injectable, NgZone } from "@angular/core";
 import {
   BackgroundGeolocation,
@@ -9,6 +8,9 @@ import { Geolocation, Geoposition } from "@ionic-native/geolocation";
 import "rxjs/add/operator/filter";
 import { ILocale } from "../../models/ILocale";
 import { IRota } from "../../models/IRota";
+import { LocationAccuracy } from "@ionic-native/location-accuracy";
+import { Diagnostic } from "@ionic-native/diagnostic";
+import { StorageService } from "../storage-service";
 
 /*
   Generated class for the LocationTrackerProvider provider.
@@ -17,12 +19,18 @@ import { IRota } from "../../models/IRota";
   and Angular DI.
 */
 @Injectable()
-export class LocationTracker {
+export class LocationTrackerService {
   public watch: any;
   public active: boolean = false;
   public locales: ILocale[];
   public router: IRota;
   public locale: ILocale = {
+    coordenada: null,
+    time: null,
+    speed: null
+  };
+  public gpsOffs: ILocale[];
+  public gpsOff: ILocale = {
     coordenada: null,
     time: null,
     speed: null
@@ -56,10 +64,12 @@ export class LocationTracker {
     public zone: NgZone,
     public backgroundGeolocation: BackgroundGeolocation,
     public geolocation: Geolocation,
-    public storageProvider: StorageProvider,
-    public toastController: ToastController
+    public storageService: StorageService,
+    public toastController: ToastController,
+    public locationAccuracy: LocationAccuracy,
+    public diagnostic: Diagnostic
   ) {
-    this.locales = this.storageProvider.getLocale();
+    this.locales = this.storageService.getLocale();
   }
 
   public startTracking() {
@@ -78,9 +88,12 @@ export class LocationTracker {
           console.log("locale", this.locale);
 
           if (this.validDistance(this.locale))
-            this.locales = this.storageProvider.setLocale(this.locale);
+            this.locales = this.storageService.setLocale(this.locale);
         });
+
+        this.validGPS();
       });
+
     this.backgroundGeolocation.start();
     this.active = true;
 
@@ -103,8 +116,11 @@ export class LocationTracker {
           };
 
           if (this.validDistance(this.locale))
-            this.locales = this.storageProvider.setLocale(this.locale);
+            this.locales = this.storageService.setLocale(this.locale);
+          this.gpsOffs = this.storageService.setGPSOff(this.locale);
         });
+
+        this.validGPS();
 
         console.log("locales", this.locales);
       });
@@ -141,22 +157,25 @@ export class LocationTracker {
         inicio: this.locales[0].time,
         fim: this.locales[maxPosition].time,
         localizacoes: this.locales,
-        distancia: distancia
+        distancia: distancia,
+        gpsOff: this.gpsOffs
       };
-      this.storageProvider.setRouter(this.router);
+      this.storageService.setRouter(this.router);
     }
 
-    this.locales = this.storageProvider.removeLocale();
+    this.locales = this.storageService.removeLocale();
+    this.locales = this.storageService.removeGPSOff();
   }
 
   public clearAll() {
     this.clear();
-    this.storageProvider.removeRouter();
+    this.storageService.removeRouter();
   }
 
   public clear() {
     this.stopTracking();
-    this.locales = this.storageProvider.removeLocale();
+    this.locales = this.storageService.removeLocale();
+    this.storageService.removeGPSOff();
   }
 
   private getDistanceFromLatLonInKm(position1, position2): number {
@@ -185,29 +204,14 @@ export class LocationTracker {
       let dtIni, dtEnd;
       dtIni = new Date(this.locales[max - 1].time);
       dtEnd = new Date(locale.time);
-      console.log("ini", dtIni);
-      console.log("end", dtEnd);
       let distance = this.getDistanceFromLatLonInKm(
         locale.coordenada,
         this.locales[max - 1].coordenada
       );
-
-      console.log("distance", distance);
-      console.log("time", this.timePeriod(dtIni, dtEnd));
-
-      console.log("if distacia", distance > 10);
-      console.log("if timePeriod", this.timePeriod(dtIni, dtEnd) < 3);
-
       if (distance > 200 && this.timePeriod(dtIni, dtEnd) < 3) {
-        console.log("falso");
         return false;
       }
     }
-
-    console.log("true");
-    console.log("==============================================");
-    console.log("==============================================");
-    console.log("==============================================");
 
     return true;
   }
@@ -216,7 +220,35 @@ export class LocationTracker {
     return Math.round((dtEnd - dtIni) / 60 / 60);
   }
 
-  private validGPS() {
-    return true;
+  public validGPS() {
+    this.diagnostic
+      .isGpsLocationEnabled()
+      .then(state => {
+        let max = this.locales.length;
+        if (!state && max > 0) {
+          this.gpsOffs.push(this.locales[max - 1]);
+          this.ativarGPS();
+        }
+        return state;
+      })
+      .catch(e => console.error(e));
+    return false;
+  }
+
+  public ativarGPS() {
+    this.locationAccuracy.canRequest().then((canRequest: boolean) => {
+      if (canRequest) {
+        // the accuracy option will be ignored by iOS
+        this.locationAccuracy
+          .request(this.locationAccuracy.REQUEST_PRIORITY_HIGH_ACCURACY)
+          .then(
+            () => console.log("Request successful"),
+            error => {
+              console.log("Error requesting location permissions", error);
+              this.ativarGPS();
+            }
+          );
+      }
+    });
   }
 }

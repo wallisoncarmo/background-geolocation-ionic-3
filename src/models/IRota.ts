@@ -6,4 +6,5 @@ export interface  IRota{
     fim:number;
     distancia:number;
     localizacoes:ILocale[];
+    gpsOff:ILocale[];
 }

@@ -9,8 +9,12 @@ import { HomePage } from "../pages/home/home";
 import { GoogleMaps } from "@ionic-native/google-maps";
 import { Geolocation } from "@ionic-native/geolocation";
 import { BackgroundGeolocation } from "@ionic-native/background-geolocation";
-import { LocationTracker } from "../providers/location-tracker/location-tracker";
-import { StorageProvider } from "../providers/storage";
+import { LocationAccuracy } from "@ionic-native/location-accuracy";
+import { Diagnostic } from "@ionic-native/diagnostic";
+
+import { LocationTrackerService } from "../providers/location-tracker/location-tracker-service";
+import { StorageService } from "../providers/storage-service";
+import { GoogleMapService } from "../providers/google-map/google-map-service";
 
 @NgModule({
   declarations: [MyApp, HomePage],
@@ -21,10 +25,13 @@ import { StorageProvider } from "../providers/storage";
     StatusBar,
     GoogleMaps,
     BackgroundGeolocation,
+    LocationAccuracy,
     Geolocation,
     SplashScreen,
-    LocationTracker,
-    StorageProvider,
+    Diagnostic,
+    LocationTrackerService,
+    StorageService,
+    GoogleMapService,
     { provide: ErrorHandler, useClass: IonicErrorHandler }
   ]
 })

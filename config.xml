@@ -89,5 +89,7 @@
         <variable name="API_KEY_FOR_ANDROID" value="AIzaSyBMn3GpvUCdkhObO9ZhaZBfGaPY8l4yFfk" />
         <variable name="API_KEY_FOR_IOS" value="AIzaSyBMn3GpvUCdkhObO9ZhaZBfGaPY8l4yFfk" />
     </plugin>
+    <plugin name="cordova-plugin-request-location-accuracy" spec="^2.2.3" />
+    <plugin name="cordova.plugins.diagnostic" spec="^4.0.8" />
     <engine name="android" spec="^7.0.0" />
 </widget>
