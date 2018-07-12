@@ -1,4 +1,7 @@
+import { ICoordenada } from "./ICoordenada";
+
 export interface  ILocale{
-    lat:number;
-    lng:number;
+    coordenada:ICoordenada;
+    time:number;
+    speed:number;
 }

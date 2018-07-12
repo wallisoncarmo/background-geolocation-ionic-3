@@ -9,11 +9,15 @@
 <ion-content padding>
   <h3>Ionic GoogleMaps</h3>
 
+  <ion-select *ngIf="routers.length" [(ngModel)]="router" (ionChange)="changeRoute(router)">
+    <option [value]="null">Selecione</option>
+    <ion-option *ngFor="let item of routers" [value]="item">{{item.nome}}</ion-option>
+  </ion-select>
   <div id="map_canvas">
-      <button ion-button  color="secondary" (click)="start()">Iniciar</button>
-      <button ion-button  color="dark" (click)="stop()">Pausar</button>
-      <button ion-button  color="danger" (click)="limpar()">Finalizar</button>
+    <button ion-button color="secondary" (click)="start()">Iniciar</button>
+    <button ion-button color="primary" (click)="stop()">Pausar</button>
+    <button ion-button color="dark" (click)="finish()">Finalizar</button>
+    <button ion-button color="danger" (click)="clear()">Limpar</button>
+    <button ion-button color="danger" (click)="clearAll()">Remover Todos</button>
   </div>
-
-
 </ion-content>
