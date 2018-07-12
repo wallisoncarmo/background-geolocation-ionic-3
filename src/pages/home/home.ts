@@ -35,18 +35,19 @@ export class HomePage {
     public geolocation: Geolocation
   ) {
     this.colors = [
-      "#00FF00",
-      "#FF0000",
-      "#0000FF",
-      "#FFFF00",
-      "#CCEEFF",
+      "#DC143C",
+      "#8A2BE2",
+      "#00008B",
+      "#006400",
+      "#2F4F4F",
       "#000000",
-      "#FFFFFF"
+      "#191970"
     ];
     this.loadMap();
   }
 
   public initRouter() {
+    this.n = 0;
     this.routers = this.storageProvider.getRouter();
   }
 
@@ -55,26 +56,31 @@ export class HomePage {
   }
 
   public stop() {
+    this.n = 0;
     this.locationTracker.stopTracking();
     this.addPolyline();
   }
 
   public finish() {
+    this.n = 0;
     this.locationTracker.finish();
     this.addPolyline();
   }
 
   public clearAll() {
+    this.n = 0;
     this.locationTracker.clearAll();
     this.addPolyline();
   }
 
   public clear() {
+    this.n = 0;
     this.locationTracker.clear();
     this.addPolyline();
   }
 
   public loadMap() {
+    this.n = 0;
     this.current = new LatLng(-15.8002699, -47.8929005);
     this.geolocation
       .getCurrentPosition()
@@ -181,7 +187,7 @@ export class HomePage {
           <h1>${titulo}</h1>
         </div>
         <div class="modal-body">
-          <p>Data e Hora:${locale.time}</p>
+          <p>Data e Hora:${this.convertDate(locale.time)}</p>
         </div>
       </div>
     </div>`
@@ -196,14 +202,17 @@ export class HomePage {
     return htmlInfoWindow;
   }
 
-  public convertDate(date: Date, config = null) {
-    return date.toLocaleDateString("pt-BR", config);
+  public convertDate(timestamp: number, config = {day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}) {
+    let date = new Date(timestamp);
+    return date.toLocaleDateString('pt-BR',config);
   }
 
-  public changeRoute(router) {
-    if (router) {
+  public changeRoute(router:IRota) {
+    if (router.nome) {
       this.map.clear();
       this.pushPolyline(this.router);
+    }else{
+      this.addPolyline();
     }
   }
 }

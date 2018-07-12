@@ -75,6 +75,8 @@ export class LocationTracker {
             speed: location.speed
           };
 
+          console.log("locale", this.locale);
+
           if (this.validDistance(this.locale))
             this.locales = this.storageProvider.setLocale(this.locale);
         });
@@ -177,19 +179,35 @@ export class LocationTracker {
   private validDistance(locale: ILocale) {
     let max = this.locales.length;
 
+    console.log("max", max);
+
     if (max > 1) {
       let dtIni, dtEnd;
-      dtEnd = new Date(this.locales[max - 1].time);
-      dtIni = new Date(locale.time);
+      dtIni = new Date(this.locales[max - 1].time);
+      dtEnd = new Date(locale.time);
+      console.log("ini", dtIni);
+      console.log("end", dtEnd);
       let distance = this.getDistanceFromLatLonInKm(
         locale.coordenada,
         this.locales[max - 1].coordenada
       );
 
-      if (distance > 10 && this.timePeriod(dtIni, dtEnd) < 3) {
+      console.log("distance", distance);
+      console.log("time", this.timePeriod(dtIni, dtEnd));
+
+      console.log("if distacia", distance > 10);
+      console.log("if timePeriod", this.timePeriod(dtIni, dtEnd) < 3);
+
+      if (distance > 200 && this.timePeriod(dtIni, dtEnd) < 3) {
+        console.log("falso");
         return false;
       }
     }
+
+    console.log("true");
+    console.log("==============================================");
+    console.log("==============================================");
+    console.log("==============================================");
 
     return true;
   }

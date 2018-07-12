@@ -10,7 +10,7 @@
   <h3>Ionic GoogleMaps</h3>
 
   <ion-select *ngIf="routers.length" [(ngModel)]="router" (ionChange)="changeRoute(router)">
-    <option [value]="null">Selecione</option>
+    <ion-option selected  >Selecione</ion-option>
     <ion-option *ngFor="let item of routers" [value]="item">{{item.nome}}</ion-option>
   </ion-select>
   <div id="map_canvas">
