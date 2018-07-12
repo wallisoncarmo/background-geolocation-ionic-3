@@ -6,10 +6,12 @@ import {
 } from "@ionic-native/background-geolocation";
 import { Geolocation, Geoposition } from "@ionic-native/geolocation";
 import "rxjs/add/operator/filter";
-import { ILocale } from "../../models/ILocale";
-import { IRota } from "../../models/IRota";
 import { LocationAccuracy } from "@ionic-native/location-accuracy";
 import { Diagnostic } from "@ionic-native/diagnostic";
+import { BatteryStatus } from "@ionic-native/battery-status";
+
+import { ILocale } from "../../models/ILocale";
+import { IRota } from "../../models/IRota";
 import { StorageService } from "../storage-service";
 
 /*
@@ -24,6 +26,8 @@ export class LocationTrackerService {
   public active: boolean = false;
   public locales: ILocale[];
   public router: IRota;
+  public batteryService: any;
+  public batteryValue: any;
   public locale: ILocale = {
     coordenada: null,
     time: null,
@@ -67,7 +71,8 @@ export class LocationTrackerService {
     public storageService: StorageService,
     public toastController: ToastController,
     public locationAccuracy: LocationAccuracy,
-    public diagnostic: Diagnostic
+    public diagnostic: Diagnostic,
+    private batteryStatus: BatteryStatus
   ) {
     this.locales = this.storageService.getLocale();
   }
@@ -76,6 +81,10 @@ export class LocationTrackerService {
     this.stopTracking();
     this.ativarGPS();
 
+    this.batteryService = this.batteryStatus.onChange().subscribe(status => {
+      this.batteryValue = status.level;
+      console.log(status.level, status.isPlugged);
+    });
     this.diagnostic.registerLocationStateChangeHandler(state =>
       this.validGPS()
     );
@@ -86,7 +95,8 @@ export class LocationTrackerService {
         this.locale = {
           coordenada: { lat: location.latitude, lng: location.longitude },
           time: location.time,
-          speed: location.speed
+          speed: location.speed,
+          bateria: this.batteryValue
         };
 
         console.log("locale", this.locale);
@@ -121,7 +131,8 @@ export class LocationTrackerService {
             lng: position.coords.longitude
           },
           time: time,
-          speed: position.coords.speed
+          speed: position.coords.speed,
+          bateria: this.batteryValue
         };
 
         console.log("locales", this.locales);
@@ -146,6 +157,7 @@ export class LocationTrackerService {
       this.backgroundGeolocation.finish();
       this.backgroundGeolocation.stop();
       this.active = false;
+      this.batteryService.unsubscribe();
     }
   }
 

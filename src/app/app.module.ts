@@ -15,6 +15,7 @@ import { Diagnostic } from "@ionic-native/diagnostic";
 import { LocationTrackerService } from "../providers/location-tracker/location-tracker-service";
 import { StorageService } from "../providers/storage-service";
 import { GoogleMapService } from "../providers/google-map/google-map-service";
+import { BatteryStatus } from "@ionic-native/battery-status";
 
 @NgModule({
   declarations: [MyApp, HomePage],
@@ -32,6 +33,7 @@ import { GoogleMapService } from "../providers/google-map/google-map-service";
     LocationTrackerService,
     StorageService,
     GoogleMapService,
+    BatteryStatus,
     { provide: ErrorHandler, useClass: IonicErrorHandler }
   ]
 })

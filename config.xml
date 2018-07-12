@@ -91,5 +91,6 @@
     </plugin>
     <plugin name="cordova-plugin-request-location-accuracy" spec="^2.2.3" />
     <plugin name="cordova.plugins.diagnostic" spec="^4.0.8" />
+    <plugin name="cordova-plugin-battery-status" spec="^2.0.2" />
     <engine name="android" spec="^7.0.0" />
 </widget>
